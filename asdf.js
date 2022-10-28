@@ -14,7 +14,6 @@ let cameraOff = false;
 let roomName;
 let myPeerConnection;
 
-// camera정보를 가져옴.
 async function getCameras() {
   try {
     const devices = await navigator.mediaDevices.enumerateDevices();
@@ -24,7 +23,7 @@ async function getCameras() {
       const option = document.createElement("option");
       option.value = camera.deviceId;
       option.innerText = camera.label;
-      if (currentCamera.label === camera.label) { //현재 선택된 카메라를 select 맨 위에 올림
+      if (currentCamera.label === camera.label) {
         option.selected = true;
       }
       camerasSelect.appendChild(option);
@@ -34,7 +33,6 @@ async function getCameras() {
   }
 }
 
-// 카메라를 웹브라우저에 paint함
 async function getMedia(deviceId) {
   const initialConstrains = {
     audio: true,
@@ -57,7 +55,6 @@ async function getMedia(deviceId) {
   }
 }
 
-
 function handleMuteClick() {
   myStream
     .getAudioTracks()
@@ -70,7 +67,6 @@ function handleMuteClick() {
     muted = false;
   }
 }
-
 function handleCameraClick() {
   myStream
     .getVideoTracks()
@@ -83,7 +79,6 @@ function handleCameraClick() {
     cameraOff = true;
   }
 }
-
 
 async function handleCameraChange() {
   await getMedia(camerasSelect.value);
@@ -118,7 +113,6 @@ welcomeForm.addEventListener("submit", handleWelcomeSubmit);
 
 // Socket Code
 
-// A브라우저에서 B가 들어올때 welcome이벤트를 받고 offer(초대장)을 만들고 서버에 전달
 socket.on("welcome", async () => {
   const offer = await myPeerConnection.createOffer();
   myPeerConnection.setLocalDescription(offer);
@@ -126,7 +120,6 @@ socket.on("welcome", async () => {
   socket.emit("offer", offer, roomName);
 });
 
-//B가 offer를 받고 answer를 만듬 
 socket.on("offer", async (offer) => {
   console.log("received the offer");
   myPeerConnection.setRemoteDescription(offer);
@@ -136,12 +129,10 @@ socket.on("offer", async (offer) => {
   console.log("sent the answer");
 });
 
-//A가 answer를 받고 setRemoteDescription
 socket.on("answer", (answer) => {
   console.log("received the answer");
   myPeerConnection.setRemoteDescription(answer);
 });
-
 
 socket.on("ice", (ice) => {
   console.log("received candidate");
