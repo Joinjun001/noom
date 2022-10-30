@@ -13,6 +13,7 @@ let muted = false;
 let cameraOff = false;
 let roomName;
 let myPeerConnection;
+let myDataChannel;
 
 // camera정보를 가져옴.
 async function getCameras() {
@@ -37,7 +38,7 @@ async function getCameras() {
 // 카메라를 웹브라우저에 paint함
 async function getMedia(deviceId) {
   const initialConstrains = {
-    audio: true,
+    audio: false,
     video: { facingMode: "user" },
   };
   const cameraConstraints = {
@@ -71,6 +72,9 @@ function handleMuteClick() {
   }
 }
 
+
+
+
 function handleCameraClick() {
   myStream
     .getVideoTracks()
@@ -85,13 +89,30 @@ function handleCameraClick() {
 }
 
 
+
+
+
 async function handleCameraChange() {
-  await getMedia(camerasSelect.value);
+  await getMedia(camerasSelect.value); //카메라를 변경하면 새 stream을 만듬
+  if(myPeerConnection) {
+    const videoTrack = myStream.getVideoTracks()[0]; // 현재 stream을 새 stream으로 교체
+    const videoSender = myPeerConnection
+    .getSenders()
+    .find(sender => sender.track.kind === "video"); 
+    videoSender.replaceTrack(videoTrack);
+
+  }
 }
 
 muteBtn.addEventListener("click", handleMuteClick);
 cameraBtn.addEventListener("click", handleCameraClick);
 camerasSelect.addEventListener("input", handleCameraChange);
+
+
+
+
+
+
 
 // Welcome Form (join a room)
 
@@ -116,18 +137,34 @@ async function handleWelcomeSubmit(event) {
 
 welcomeForm.addEventListener("submit", handleWelcomeSubmit);
 
+
+
+
+
 // Socket Code
 
-// A브라우저에서 B가 들어올때 welcome이벤트를 받고 offer(초대장)을 만들고 서버에 전달
+// offering 
 socket.on("welcome", async () => {
+  myDataChannel = myPeerConnection.createDataChannel("chat");
+  myDataChannel.addEventListener("message", event => {
+    getChatSubmit(event);
+  });
+  console.log('made data channel');
   const offer = await myPeerConnection.createOffer();
   myPeerConnection.setLocalDescription(offer);
   console.log("sent the offer");
   socket.emit("offer", offer, roomName);
 });
 
-//B가 offer를 받고 answer를 만듬 
+// answering 
 socket.on("offer", async (offer) => {
+  myPeerConnection.addEventListener("datachannel", (event) => {
+    myDataChannel = event.channel;
+    myDataChannel.addEventListener("message", event => {
+      getChatSubmit(event);
+    });
+  });
+
   console.log("received the offer");
   myPeerConnection.setRemoteDescription(offer);
   const answer = await myPeerConnection.createAnswer();
@@ -136,13 +173,13 @@ socket.on("offer", async (offer) => {
   console.log("sent the answer");
 });
 
-//A가 answer를 받고 setRemoteDescription
+// remotedescription
 socket.on("answer", (answer) => {
   console.log("received the answer");
   myPeerConnection.setRemoteDescription(answer);
 });
 
-
+// ice 
 socket.on("ice", (ice) => {
   console.log("received candidate");
   myPeerConnection.addIceCandidate(ice);
@@ -151,7 +188,19 @@ socket.on("ice", (ice) => {
 // RTC Code
 
 function makeConnection() {
-  myPeerConnection = new RTCPeerConnection();
+  myPeerConnection = new RTCPeerConnection({
+    iceServers: [
+        {
+        urls: [
+        "stun:stun.l.google.com:19302",
+        "stun:stun1.l.google.com:19302",
+        "stun:stun2.l.google.com:19302",
+        "stun:stun3.l.google.com:19302",
+        "stun:stun4.l.google.com:19302",
+        ],
+        },
+        ],
+  });
   myPeerConnection.addEventListener("icecandidate", handleIce);
   myPeerConnection.addEventListener("addstream", handleAddStream);
   myStream
@@ -168,3 +217,34 @@ function handleAddStream(data) {
   const peerFace = document.getElementById("peerFace");
   peerFace.srcObject = data.stream;
 }
+
+
+
+
+
+// chat code 
+
+const chatForm = document.querySelector("#myStream form")
+const chatInput = document.querySelector("#chat-input");
+const chatList= document.querySelector("#chat-list");
+//사용자가 chat를 치면 그 chat 내용을 datachannel에 보내버리자.
+
+//message를 보내는 함수 즉 A브라우저에서 실행됨. 
+function handleChatSubmit(event){
+  event.preventDefault();
+  myDataChannel.send(chatInput.value); 
+  const li = document.createElement("li");
+  li.innerText = chatInput.value;
+  chatList.appendChild(li);
+  chatInput.value = "";
+}
+
+//message를 받고 chatlist에 추가하기 
+function getChatSubmit(event) {
+  const li = document.createElement("li");
+  li.innerText = event.data;
+  chatList.appendChild(li);
+  chatInput.value = "";
+}
+
+chatForm.addEventListener("submit", handleChatSubmit);
