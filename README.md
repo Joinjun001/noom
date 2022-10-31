@@ -66,3 +66,8 @@ clone coding using WEBRTS and WebSocket
     오류(?) 2 이름이 없어서 누가 보낸 채팅인지 모름. 0.6에서 개선할것 
     
     
+
+0.6 >
+
+    사람이 나가는걸 window.onupload()로 감지함. 즉 stream을 종료할 조건을 찾음.
+    

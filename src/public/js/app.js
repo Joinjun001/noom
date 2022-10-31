@@ -219,32 +219,53 @@ function handleAddStream(data) {
 }
 
 
+// peer leaves > remove stream
 
+function handlePeerLeave(){
+  myDataChannel.send("someone leaved");
+  
+}
+//유저가 나가면 datachannel에 유저가 나갔다고 메세지 전달 
 
+function stopStreamedVideo(videoElem) {
+  const stream = videoElem.srcObject;
+  const tracks = stream.getTracks();
+
+  tracks.forEach(function(track) {
+    track.stop();
+  });
+
+  videoElem.srcObject = null;
+}
+
+window.onunload = function() {
+  handlePeerLeave();
+}
 
 // chat code 
-
 const chatForm = document.querySelector("#myStream form")
 const chatInput = document.querySelector("#chat-input");
 const chatList= document.querySelector("#chat-list");
+
+function writeChat(message) {
+  const li = document.createElement("li");
+  li.innerText = message;
+  chatList.appendChild(li);
+  chatInput.value = "";
+}
 //사용자가 chat를 치면 그 chat 내용을 datachannel에 보내버리자.
 
 //message를 보내는 함수 즉 A브라우저에서 실행됨. 
 function handleChatSubmit(event){
+  const message = chatInput.value;
   event.preventDefault();
-  myDataChannel.send(chatInput.value); 
-  const li = document.createElement("li");
-  li.innerText = chatInput.value;
-  chatList.appendChild(li);
-  chatInput.value = "";
+  myDataChannel.send(message); 
+  writeChat(message);
 }
 
 //message를 받고 chatlist에 추가하기 
 function getChatSubmit(event) {
-  const li = document.createElement("li");
-  li.innerText = event.data;
-  chatList.appendChild(li);
-  chatInput.value = "";
+  writeChat(event.data);
 }
 
 chatForm.addEventListener("submit", handleChatSubmit);
