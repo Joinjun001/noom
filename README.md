@@ -71,3 +71,7 @@ clone coding using WEBRTS and WebSocket
 
     사람이 나가는걸 window.onupload()로 감지함. 즉 stream을 종료할 조건을 찾음.
     
+    닉네임구분지어 만들기 
+
+
+0.7 > css 개선함 
